@@ -1,0 +1,13 @@
+# python build artefacts
+__pycache__/
+*.py[cod]
+
+# OS / editor noise
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+
+# local scratch
+_test-*.png

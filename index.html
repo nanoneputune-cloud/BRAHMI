@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Brahmi Lipi Studio — Recognize · Train · Similar</title>
+<meta name="theme-color" content="#0b0d12" />
+<link rel="icon" href="assets/favicon.ico" sizes="any" />
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png" />
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Brahmi&family=Noto+Sans+Kannada:wght@400;600&family=Noto+Sans+Devanagari:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<div class="chrome">
+<header class="topbar">
+  <div class="brand">
+    <img class="brand-mark" src="assets/logo-mark-128.png" alt="Brahmi Lipi Studio" width="54" height="54" />
+    <div class="brand-text">
+      <h1>Brahmi Lipi Studio</h1>
+      <p>Draw · Train · Recognize &nbsp;—&nbsp;
+        <span class="kn">ಕನ್ನಡ</span> · <span class="hi">हिन्दी</span> · English</p>
+    </div>
+  </div>
+  <div class="status" id="status">
+    <span class="chip" id="chipFont">font: checking…</span>
+    <span class="chip" id="chipTemplates">0 templates</span>
+    <span class="chip" id="chipTrained">0 trained</span>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab active" data-view="recognize">
+    <span class="tab-num">1</span> Recognize
+    <small>upload image → every character + words</small>
+  </button>
+  <button class="tab" data-view="train">
+    <span class="tab-num">2</span> Train
+    <small>draw → assign letter / accent</small>
+  </button>
+  <button class="tab" data-view="similar">
+    <span class="tab-num">3</span> Similar
+    <small>draw 1+ characters → closest matches</small>
+  </button>
+</nav>
+</div>
+
+<main>
+
+<!-- ================= RECOGNIZE ================= -->
+<section class="view active" id="view-recognize">
+  <div class="grid-2">
+    <div class="panel">
+      <h2>Upload a Brahmi image</h2>
+      <div class="drop" id="recDrop" tabindex="0">
+        <input type="file" id="recFile" accept="image/*" hidden />
+        <div class="drop-inner">
+          <div class="drop-icon br">𑀲</div>
+          <strong>Click, drop an image, or press Ctrl&nbsp;+&nbsp;V</strong>
+          <span>PNG / JPG — scans, inscription photos, exported text</span>
+        </div>
+      </div>
+      <div class="row">
+        <label class="range-field">
+          <span>Confidence ≥ <b id="recThrVal">45%</b></span>
+          <input type="range" id="recThr" min="20" max="90" step="5" value="45" />
+        </label>
+      </div>
+      <div class="row wrap">
+        <button class="btn ghost" id="recDemo">Load demo line</button>
+        <button class="btn ghost" id="recReset">Clear</button>
+        <button class="btn ghost" id="recJson" disabled>Export JSON</button>
+      </div>
+      <p class="hint">Every mark is segmented, matched against the built-in library <em>and</em> your trained
+      samples, then grouped into words and reported line by line in Kannada, Hindi and English.<br/>
+      The overlays are drawn on their own layer above the image — the switch and opacity slider in the
+      image corner let you fade them out to read the original.</p>
+    </div>
+
+    <div class="panel">
+      <h2>Source <span class="count" id="recStat">—</span></h2>
+      <div class="stage-wrap" id="recStage">
+        <div class="stage-ctrl left" id="recScript" hidden>
+          <span class="ctrl-label">Labels</span>
+          <button class="lang on" data-script="br" title="Overlay labels in Brahmi">𑀩</button>
+          <button class="lang" data-script="en" title="Overlay labels in English (IAST)">EN</button>
+          <button class="lang" data-script="kn" title="Overlay labels in Kannada">ಕನ</button>
+          <button class="lang" data-script="hi" title="Overlay labels in Hindi">हि</button>
+        </div>
+        <div class="stage" id="recScroll">
+          <div class="stage-empty" id="recEmpty">
+            <span class="muted">No image yet — upload, paste with Ctrl+V, or load the demo.</span>
+          </div>
+          <div class="stage-layers" id="recLayers" hidden></div>
+        </div>
+        <div class="stage-ctrl" id="recCtrl" hidden>
+          <button class="switch on" id="ovSwitch" title="Show / hide the overlay">
+            <span class="knob"></span><span>Overlay</span>
+          </button>
+          <button class="mini on" id="ovLabels" title="Letter labels on the overlay">A</button>
+          <label class="op" title="Overlay opacity">
+            <input type="range" id="ovOpacity" min="0" max="100" step="5" value="85" />
+            <span id="ovOpacityVal">85%</span>
+          </label>
+          <button class="mini" id="ovZoomOut" title="Zoom out">−</button>
+          <span class="zoomval" id="ovZoomVal">fit</span>
+          <button class="mini" id="ovZoomIn" title="Zoom in">+</button>
+        </div>
+      </div>
+      <div class="legend">
+        <span><i class="dot ok"></i> confident</span>
+        <span><i class="dot warn"></i> weak</span>
+        <span><i class="dot bad"></i> unknown</span>
+        <span class="muted">toggle <b>A</b> for per-character labels</span>
+      </div>
+    </div>
+  </div>
+  <div id="recResults"></div>
+</section>
+
+<!-- ================= TRAIN ================= -->
+<section class="view" id="view-train">
+  <div class="grid-2">
+    <div class="panel">
+      <h2>Draw the glyph</h2>
+      <div class="pad-wrap">
+        <canvas id="trainPad" class="pad" width="512" height="512"></canvas>
+      </div>
+      <div class="pad-tools">
+        <button class="btn tiny" data-pad="trainPad" data-act="undo">Undo</button>
+        <button class="btn tiny" data-pad="trainPad" data-act="clear">Clear</button>
+        <label class="brush">Brush
+          <input type="range" id="trainBrush" min="4" max="30" value="13" />
+        </label>
+      </div>
+
+      <div class="assign" id="trainAssign">
+        <div class="picked" id="trainPicked"><span class="muted">No label selected — pick one below</span></div>
+        <button class="btn" id="trainSave" disabled>Save sample</button>
+      </div>
+
+      <div class="row wrap">
+        <input type="search" id="labelSearch" class="search" placeholder="Search: ka · kha · ಖ · ख…" />
+        <select id="labelFilter" class="select">
+          <option value="all">All characters</option>
+          <option value="vowel">Vowels</option>
+          <option value="consonant">Consonants</option>
+          <option value="matra">Accents (mātrās)</option>
+          <option value="sign">Signs</option>
+        </select>
+      </div>
+      <div class="chips-grid" id="labelGrid"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Trained samples <span class="count" id="trainedCount">0</span></h2>
+      <p class="hint">Samples live in this browser (localStorage). Each one is a 16×16 normalised ink map, so 2–3 drawings per letter already sharpen recognition.</p>
+      <div class="row wrap">
+        <button class="btn ghost tiny" id="trainedExport">Export model</button>
+        <button class="btn ghost tiny" id="trainedImport">Import model</button>
+        <input type="file" id="trainedImportFile" accept="application/json,.json" hidden />
+        <button class="btn ghost tiny danger" id="trainedClear">Delete all</button>
+      </div>
+      <div class="sample-list" id="sampleList"><span class="muted">Nothing trained yet.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SIMILAR ================= -->
+<section class="view" id="view-similar">
+  <div class="seg" id="simMode">
+    <button class="active" data-mode="draw">Draw &amp; match</button>
+    <button data-mode="upload">Upload &amp; match</button>
+  </div>
+
+  <div class="wordstrip" id="simWordStrip" hidden>
+    <span class="ws-label">Formed word</span>
+    <div class="ws-body" id="simWordBody"></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel" id="simDrawPane">
+      <h2>Sketch a character</h2>
+      <div class="pad-wrap">
+        <canvas id="simPad" class="pad" width="512" height="512"></canvas>
+      </div>
+      <div class="pad-tools">
+        <button class="btn tiny" data-pad="simPad" data-act="undo">Undo</button>
+        <button class="btn tiny" data-pad="simPad" data-act="clear">Clear</button>
+        <label class="brush">Brush
+          <input type="range" id="simBrush" min="4" max="30" value="13" />
+        </label>
+      </div>
+      <p class="hint">Draw one character, or draw several side by side — each mark is matched on its own and
+      assembled into a word. Matching updates while you draw.</p>
+    </div>
+
+    <div class="panel" id="simUploadPane" hidden>
+      <h2>Upload &amp; pick a character</h2>
+      <div class="drop" id="simDrop" tabindex="0">
+        <input type="file" id="simFile" accept="image/*" hidden />
+        <div class="drop-inner">
+          <div class="drop-icon br">𑀫</div>
+          <strong>Click, drop, or press Ctrl&nbsp;+&nbsp;V</strong>
+          <span>Then click any character in the image</span>
+        </div>
+      </div>
+      <div class="stage-wrap" id="simStage" hidden>
+        <div class="stage" id="simScroll">
+          <div class="stage-layers" id="simLayers"></div>
+        </div>
+        <div class="stage-ctrl">
+          <button class="mini" id="simPrev" title="Previous character">‹</button>
+          <span class="zoomval" id="simPick">—</span>
+          <button class="mini" id="simNext" title="Next character">›</button>
+        </div>
+      </div>
+      <p class="hint" id="simPickHint" hidden>Click any letter to match that single character, or step through
+      every detected glyph with <b>‹ ›</b>. Outlined = selectable, gold = selected.</p>
+    </div>
+
+    <div class="panel" id="simMatchPane">
+      <h2>Closest characters</h2>
+      <div id="simMatches"><span class="muted">Draw something or upload an image.</span></div>
+    </div>
+  </div>
+
+  <div class="panel" id="simHypoPane">
+    <h2>Similar word formations</h2>
+    <p class="tagline">Every mark contributes its best few candidates; the combinations are ranked by combined similarity.</p>
+    <div class="hypos" id="simHypos"><span class="muted">Draw two or more characters to build a word.</span></div>
+  </div>
+
+  <div class="panel" id="simPhoneticPane">
+    <h2>Similar phonetics</h2>
+    <div id="simPhonetic"><span class="muted">—</span></div>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <span>Offline-first · no server · your trained model stays in this browser</span>
+  <span class="br">𑀩𑀭𑀳𑁆𑀫𑀻</span>
+</footer>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="js/data.js"></script>
+<script src="js/glyph.js"></script>
+<script src="js/library.js"></script>
+<script src="js/pad.js"></script>
+<script src="js/recognize.js"></script>
+<script src="js/train.js"></script>
+<script src="js/similar.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
